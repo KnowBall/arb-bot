@@ -11,14 +11,14 @@ API_KEY = os.getenv('API_KEY')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
-THEODDSAPI_URL = 'https://api.the-odds-api.com/v4/sports/basketball_nba/odds/'
+SPORTS = ['basketball_nba', 'mma_mixed_martial_arts', 'tennis', 'baseball_mlb', 'americanfootball_nfl']
 BOOKMAKERS = ['fanduel', 'draftkings']
 REGION = 'us'
 MARKETS = 'h2h'
 
 app = Flask(__name__)
 
-def get_odds():
+def get_odds(sport):
     params = {
         'apiKey': API_KEY,
         'regions': REGION,
@@ -26,7 +26,8 @@ def get_odds():
         'bookmakers': ','.join(BOOKMAKERS),
         'oddsFormat': 'american',
     }
-    response = requests.get(THEODDSAPI_URL, params=params)
+    url = f'https://api.the-odds-api.com/v4/sports/{sport}/odds/'
+    response = requests.get(url, params=params)
     response.raise_for_status()
     return response.json()
 
@@ -36,7 +37,7 @@ def implied_prob(odds):
     else:
         return abs(odds) / (abs(odds) + 100)
 
-def find_arbitrage(games):
+def find_arbitrage(games, sport_title):
     arbs = []
     for game in games:
         teams = game['teams']
@@ -57,6 +58,7 @@ def find_arbitrage(games):
                     prob = implied_prob(o1) + implied_prob(o2)
                     if prob < 1:
                         arbs.append({
+                            'sport': sport_title,
                             'game': game['home_team'] + ' vs ' + game['away_team'],
                             'team1': t1,
                             'team2': t2,
@@ -66,7 +68,6 @@ def find_arbitrage(games):
                         })
     return arbs
 
-
 def send_telegram_alert(message):
     url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
     data = {'chat_id': CHAT_ID, 'text': message}
@@ -74,10 +75,16 @@ def send_telegram_alert(message):
 
 def check_and_alert():
     try:
-        games = get_odds()
-        arbs = find_arbitrage(games)
-        for arb in arbs:
+        all_arbs = []
+        for sport in SPORTS:
+            games = get_odds(sport)
+            sport_title = sport.replace('_', ' ').title()
+            arbs = find_arbitrage(games, sport_title)
+            all_arbs.extend(arbs)
+        
+        for arb in all_arbs:
             msg = (f"Arbitrage Opportunity!\n"
+                   f"Sport: {arb['sport']}\n"
                    f"Game: {arb['game']}\n"
                    f"{arb['team1']} (FanDuel): {arb['fanduel_odds']}\n"
                    f"{arb['team2']} (DraftKings): {arb['draftkings_odds']}\n"
@@ -97,9 +104,9 @@ def start_periodic_thread():
 
 @app.route('/')
 def home():
-    return 'NBA Arbitrage Bot is running!'
+    return 'Multi-Sport Arbitrage Bot is running!'
 
 if __name__ == '__main__':
-    send_telegram_alert("🚨 Test Alert: Arbitrage bot is working and connected to Telegram! ")
+    send_telegram_alert("🚨 Test Alert: Multi-sport arbitrage bot is working and connected to Telegram! ")
     start_periodic_thread()
     app.run(host='0.0.0.0', port=8080) 
