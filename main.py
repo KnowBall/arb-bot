@@ -65,6 +65,10 @@ def find_arbitrage(games):
                             'implied_prob': prob
                         })
     return arbs
+    
+    # === Manual test alert ===
+send_telegram("🚨 Test Alert: Arbitrage bot is working and connected to Telegram!")
+
 
 def send_telegram_alert(message):
     url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
