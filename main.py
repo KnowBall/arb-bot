@@ -65,9 +65,6 @@ def find_arbitrage(games):
                             'implied_prob': prob
                         })
     return arbs
-    
-    # === Manual test alert ===
-send_telegram("🚨 Test Alert: Arbitrage bot is working and connected to Telegram!")
 
 
 def send_telegram_alert(message):
@@ -103,5 +100,6 @@ def home():
     return 'NBA Arbitrage Bot is running!'
 
 if __name__ == '__main__':
+    send_telegram_alert("🚨 Test Alert: Arbitrage bot is working and connected to Telegram!")
     start_periodic_thread()
     app.run(host='0.0.0.0', port=8080) 
